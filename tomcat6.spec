@@ -55,7 +55,7 @@
 Name: tomcat6
 Epoch: 0
 Version: %{major_version}.%{minor_version}.%{micro_version}
-Release: 105%{?dist}
+Release: 111%{?dist}
 Summary: Apache Servlet/JSP Engine, RI for Servlet %{servletspec}/JSP %{jspspec} API
 
 Group: Networking/Daemons
@@ -130,6 +130,10 @@ Patch49: %{name}-6.0.24-CVE-2016-5388.patch
 Patch50: %{name}-6.0.24-CVE-2016-8745.patch
 Patch51: %{name}-6.0.24-CVE-2016-6816.patch
 Patch52: %{name}-6.0.24-CVE-2017-6056.patch
+Patch53: %{name}-6.0.24-CVE-2017-5647.patch
+Patch54: %{name}-6.0.24-rhbz-1461851.patch
+Patch55: %{name}-6.0.24-CVE-2017-5664.patch
+Patch56: %{name}-6.0.24-CVE-2017-12617.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 
@@ -355,6 +359,10 @@ pushd %{packdname}
 %patch50 -p0
 %patch51 -p0
 %patch52 -p0
+%patch53 -p0
+%patch54 -p0
+%patch55 -p0
+%patch56 -p0
 
 %{__ln_s} $(build-classpath jakarta-taglibs-core) webapps/examples/WEB-INF/lib/jstl.jar
 %{__ln_s} $(build-classpath jakarta-taglibs-standard) webapps/examples/WEB-INF/lib/standard.jar
@@ -697,29 +705,46 @@ fi
 #%{appdir}/manager
 
 %changelog
-* Mon Feb 20 2017 Coty Sutherland <csutherl@redhat.com> 0:6.0.24-105
-- Related: rhbz#1402664 CVE-2016-6816 Adding system property from asfbz-60594 to allow use of some un-encoded characters
-- Related: rhbz#1402664 CVE-2016-6816 Resolving a security regression (2017-6056) caused by CVE-2016-6816
+* Thu Oct 12 2017 Coty Sutherland <csutherl@redhat.com> 0:6.0.24-111
+- Resolves: rhbz#1498345 CVE-2017-12615 CVE-2017-12617 tomcat6: various flaws
 
-* Thu Jan 26 2017 Coty Sutherland <csutherl@redhat.com> 0:6.0.24-104
-- Related: rhbz#1402664 build. reverting ExcludeArch to fix composes
+* Tue Jun 27 2017 Coty Sutherland <csutherl@redhat.com> 0:6.0.24-110
+- Resolves: rhbz#1461292 CVE-2017-5664 tomcat6: tomcat: Security constrained bypass in error page mechanism
 
-* Tue Jan 24 2017 Coty Sutherland <csutherl@redhat.com> 0:6.0.24-102
-- Resolves: rhbz#1413589 CVE-2016-8745 tomcat6: tomcat: information disclosure due to incorrect Processor sharing
-- Resolves: rhbz#1402664 CVE-2016-6816 tomcat6: tomcat: HTTP Request smuggling vulnerability due to permitting invalid character in HTTP requests
+* Thu Jun 15 2017 Coty Sutherland <csutherl@redhat.com> 0:6.0.24-109
+- Resolves: rhbz#1461851 The tomcat6 build is incompatible with the ECJ update
+
+* Thu Jun 08 2017 Coty Sutherland <csutherl@redhat.com> 0:6.0.24-106
+- Resolves: rhbz#1441478 CVE-2017-5647 tomcat6: tomcat: Incorrect handling of pipelined requests when send file was used
+
+* Mon Mar 20 2017 Tomas Hoger <thoger@redhat.com> 0:6.0.24-105
+- Sync with 6.8 - add CVE-2016-6816 follow-up patches and revert unreleased fixes.
+- Related: rhbz#1397484 CVE-2016-6816 Adding system property from asfbz-60594 to allow use of some un-encoded characters
+- Related: rhbz#1397484 CVE-2016-6816 Resolving a security regression (2017-6056) caused by CVE-2016-6816
+- Reverts: rhbz#1415824 The tomcat6 build is incompatible with the ECJ update
+- Reverts: rhbz#1347778 The security manager doesn't work correctly
+
+* Thu Jan 26 2017 Coty Sutherland <csutherl@redhat.com> 0:6.0.24-105
+- Related: rhbz#1415824 build. reverting ExcludeArch to fix composes
+
+* Mon Jan 23 2017 Coty Sutherland <csutherl@redhat.com> 0:6.0.24-100
+- Resolves: rhbz#1413588 CVE-2016-8745 tomcat6: tomcat: information disclosure due to incorrect Processor sharing
+- Resolves: rhbz#1402665 CVE-2016-6816 tomcat6: tomcat: HTTP Request smuggling vulnerability due to permitting invalid character in HTTP requests
+- Resolves: rhbz#1415824 The tomcat6 build is incompatible with the ECJ update
 
 * Tue Aug 23 2016 Coty Sutherland <csutherl@redhat.com> 0:6.0.24-98
-- Resolves: rhbz#1362210 CVE-2016-5388 Tomcat: CGI sets environmental variable based on user supplied Proxy request header
-- Resolves: rhbz#1368119
+- Resolves: rhbz#1362211 CVE-2016-5388 Tomcat: CGI sets environmental variable based on user supplied Proxy request header
+- Resolves: rhbz#1368120 CVE-2016-6325 tomcat6: tomcat: tomcat writable config files allow privilege escalation
 
 * Mon Aug 15 2016 Coty Sutherland <csutherl@redhat.com> 0:6.0.24-97
-- Resolves: rhbz#1367051 CVE-2015-5174 URL Normalization issue
-- Resolves: rhbz#1367054 CVE-2016-0706 Security Manager bypass via StatusManagerServlet
-- Resolves: rhbz#1367058 CVE-2016-0714 Security Manager bypass via persistence mechanisms
-- Resolves: rhbz#1367054 CVE-2015-5345 Directory disclosure
+- Resolves: rhbz#1367052 CVE-2015-5174 tomcat6: tomcat: URL Normalization issue
+- Resolves: rhbz#1367057 CVE-2016-0706 tomcat6: tomcat: directory disclosure
+- Resolves: rhbz#1367059 CVE-2016-0714 Security Manager bypass via persistence mechanisms
+- Resolves: rhbz#1367055 CVE-2015-5345 Directory disclosure
 
 * Tue Jul 19 2016 Coty Sutherland <csutherl@redhat.com> 0:6.0.24-96
-- Resolves: rhbz#1357123 rpm -V tomcat6 fails due on /var/log/tomcat6/catalina.out
+- Resolves: rhbz#1327238 rpm -V tomcat6 fails due on /var/log/tomcat6/catalina.out
+- Resolves: rhbz#1347778 The security manager doesn't work correctly
 
 * Mon Feb 8 2016 Coty Sutherland <csutherl@redhat.com> 0:6.0.24-95
 - Related: rhbz#1084426 Reverting to prevent Satellite installation issues mentioned in rhbz-1302761

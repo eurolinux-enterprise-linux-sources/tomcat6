@@ -1,0 +1,13 @@
+--- java/org/apache/jasper/compiler/JDTCompiler.java.orig	2017-01-23 15:33:56.320908977 -0500
++++ java/org/apache/jasper/compiler/JDTCompiler.java	2017-01-23 15:36:33.538356122 -0500
+@@ -147,6 +147,10 @@
+                 }
+                 return result;
+             }
++
++            public boolean ignoreOptionalProblems() {
++                return false;
++            }
+         }
+ 
+         final INameEnvironment env = new INameEnvironment() {
