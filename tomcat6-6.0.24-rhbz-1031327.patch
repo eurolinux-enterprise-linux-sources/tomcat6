@@ -1,0 +1,123 @@
+--- java/org/apache/coyote/http11/Http11NioProtocol.java.orig	2015-02-19 13:44:02.721247000 -0500
++++ java/org/apache/coyote/http11/Http11NioProtocol.java	2015-02-19 13:46:49.635783000 -0500
+@@ -720,21 +720,23 @@
+ 
+                 SocketState state = processor.process(socket);
+                 if (state == SocketState.LONG) {
+-                    // Associate the connection with the processor. The next request 
+-                    // processed by this thread will use either a new or a recycled
+-                    // processor.
+-                    //if (log.isDebugEnabled()) log.debug("Not recycling ["+processor+"] Comet="+((NioEndpoint.KeyAttachment)socket.getAttachment(false)).getComet());
++                    // In the middle of processing a request/response. Keep the
++                    // socket associated with the processor.
+                     connections.put(socket, processor);
+                     if (processor.comet) {
+                         NioEndpoint.KeyAttachment att = (NioEndpoint.KeyAttachment)socket.getAttachment(false);
+                         socket.getPoller().add(socket,att.getCometOps());
+                     } else {
+-                    	//we should not hold on to the processor objects
+-                    	release(socket);
+                         socket.getPoller().add(socket);
+                     }
++                } else if ( state == SocketState.OPEN) {
++                    // In Keep-alive but between requests. OK to recycle
++                    // processor. Continue to poll for the next request
++                    socket.getPoller().add(socket);
++                    release(socket);
+                 } else {
+-                    recycledProcessors.offer(processor);
++                    // Connection closed. OK to recycle the processor
++                    release(socket);
+                 }
+                 return state;
+ 
+--- java/org/apache/coyote/http11/InternalNioInputBuffer.java.orig	2015-02-19 13:44:02.729238000 -0500
++++ java/org/apache/coyote/http11/InternalNioInputBuffer.java	2015-02-19 13:56:26.541727000 -0500
+@@ -404,7 +404,7 @@
+      * @return true if data is properly fed; false if no data is available 
+      * immediately and thread should be freed
+      */
+-    public boolean parseRequestLine(boolean useAvailableData)
++    public boolean parseRequestLine(boolean useAvailableDataOnly)
+         throws IOException {
+ 
+         //check state
+@@ -418,7 +418,7 @@
+                 
+                 // Read new bytes if needed
+                 if (pos >= lastValid) {
+-                    if (useAvailableData) {
++                    if (useAvailableDataOnly) {
+                         return false;
+                     }
+                     // Do a simple read with a short timeout
+@@ -434,7 +434,7 @@
+             // Mark the current buffer position
+             
+             if (pos >= lastValid) {
+-                if (useAvailableData) {
++                if (useAvailableDataOnly) {
+                     return false;
+                 }
+                 // Do a simple read with a short timeout
+@@ -465,7 +465,6 @@
+                 }
+                 pos++;
+             }
+-            parsingRequestLineStart = pos;
+             parsingRequestLinePhase = 3;
+         }
+         if ( parsingRequestLinePhase == 3 ) {
+@@ -483,13 +482,17 @@
+                     space = false;
+                 }
+             }
+-
++            parsingRequestLineStart = pos;
++            parsingRequestLinePhase = 4;
++        }
++        if (parsingRequestLinePhase == 4) {
+             // Mark the current buffer position
+             
+             int end = 0;
+             //
+             // Reading the URI
+             //
++            boolean space = false;
+             while (!space) {
+                 // Read new bytes if needed
+                 if (pos >= lastValid) {
+@@ -519,10 +522,9 @@
+             } else {
+                 request.requestURI().setBytes(buf, parsingRequestLineStart, end - parsingRequestLineStart);
+             }
+-            parsingRequestLineStart = pos;
+-            parsingRequestLinePhase = 4;
++            parsingRequestLinePhase = 5;
+         }
+-        if ( parsingRequestLinePhase == 4 ) {
++        if ( parsingRequestLinePhase == 5 ) {
+             // Spec says single SP but also be tolerant of multiple and/or HT
+             boolean space = true;
+             while (space) {
+@@ -537,7 +539,10 @@
+                     space = false;
+                 }
+             }
+-
++            parsingRequestLineStart = pos;
++            parsingRequestLinePhase = 6;
++         }
++         if (parsingRequestLinePhase == 6) { 
+             // Mark the current buffer position
+             
+             end = 0;
+@@ -548,7 +553,7 @@
+             while (!parsingRequestLineEol) {
+                 // Read new bytes if needed
+                 if (pos >= lastValid) {
+-                    if (!fill(true, false)) //reques line parsing
++                    if (!fill(true, false)) //request line parsing
+                         return false;
+                 }
+         

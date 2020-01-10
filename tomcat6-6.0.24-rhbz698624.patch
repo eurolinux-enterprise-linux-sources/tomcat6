@@ -1,0 +1,25 @@
+--- java/org/apache/catalina/mbeans/MBeanUtils.java.orig	2011-10-10 13:57:52.834663921 -0600
++++ java/org/apache/catalina/mbeans/MBeanUtils.java	2011-10-10 14:00:21.668668584 -0600
+@@ -742,15 +742,19 @@
+ 
+         ObjectName name = null;
+         try {
+-            String address = (String)
++            Object addressObj = 
+                 IntrospectionUtils.getProperty(connector, "address");
+             Integer port = (Integer)
+                 IntrospectionUtils.getProperty(connector, "port");
+             StringBuffer sb = new StringBuffer(domain);
+             sb.append(":type=Connector");
+             sb.append(",port=" + port);
+-            if ((address != null) && (address.length()>0)) {
+-                sb.append(",address=" + address);
++            if (addressObj != null) {
++					String address = addressObj.toString();
++					if(address.length() > 0) {
++               	sb.append(",address=");
++						sb.append(ObjectName.quote(address));
++					}
+             }
+             name = new ObjectName(sb.toString());
+             return (name);

@@ -1,0 +1,41 @@
+--- java/org/apache/juli/FileHandler.java.orig	2015-02-25 12:10:51.494065000 -0500
++++ java/org/apache/juli/FileHandler.java	2015-02-25 12:27:28.617417000 -0500
+@@ -90,6 +90,11 @@
+      * The suffix that is added to log file filenames.
+      */
+     private String suffix = null;
++    
++    /**
++     * Determins wheterh the logfile is rotatable
++     */
++    private boolean rotatable = true;
+ 
+ 
+     /**
+@@ -123,7 +128,7 @@
+         String tsDate = tsString.substring(0, 10);
+ 
+         // If the date has changed, switch log files
+-        if (!date.equals(tsDate)) {
++        if (rotatable && !date.equals(tsDate)) {
+             synchronized (this) {
+                 if (!date.equals(tsDate)) {
+                     closeWriter();
+@@ -219,6 +224,8 @@
+         ClassLoader cl = Thread.currentThread().getContextClassLoader();
+         
+         // Retrieve configuration of logging file name
++        rotatable = Boolean.parseBoolean(
++                getProperty(className + ".rotatable", "true"));
+         if (directory == null)
+             directory = getProperty(className + ".directory", "logs");
+         if (prefix == null)
+@@ -299,7 +306,7 @@
+         // Open the current log file
+         try {
+             String pathname = dir.getAbsolutePath() + File.separator +
+-                prefix + date + suffix;
++                prefix + (rotatable ? date: "") + suffix;
+             String encoding = getEncoding();
+             FileOutputStream fos = new FileOutputStream(pathname, true);
+             OutputStream os = bufferSize>0?new BufferedOutputStream(fos,bufferSize):fos;

@@ -1,0 +1,26 @@
+--- java/org/apache/naming/resources/FileDirContext.java.orig	2015-02-02 14:55:03.647452000 -0500
++++ java/org/apache/naming/resources/FileDirContext.java	2015-02-02 15:00:32.572580000 -0500
+@@ -924,7 +924,9 @@
+         public InputStream streamContent()
+             throws IOException {
+             if (binaryContent == null) {
+-                inputStream = new FileInputStream(file);
++                FileInputStream fis  = new FileInputStream(file);
++                inputStream = fis;
++                return fis;
+             }
+             return super.streamContent();
+         }
+--- java/org/apache/naming/resources/WARDirContext.java.orig	2015-02-02 14:55:03.673456000 -0500
++++ java/org/apache/naming/resources/WARDirContext.java	2015-02-02 15:03:25.122147000 -0500
+@@ -938,7 +938,9 @@
+             throws IOException {
+             try {
+                 if (binaryContent == null) {
+-                    inputStream = base.getInputStream(entry);
++                    InputStream is = base.getInputStream(entry);
++                    inputStream = is;
++                    return is;
+                 }
+             } catch (ZipException e) {
+                 throw new IOException(e.getMessage());

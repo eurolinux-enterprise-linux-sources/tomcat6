@@ -1,0 +1,108 @@
+================================================================================
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+================================================================================
+
+$Id: STATUS.txt 900477 2010-01-18 17:46:12Z pero $
+
+                         =================================
+                         Apache Tomcat 6.0 Patch Proposals
+                         =================================
+
+
+RELEASE SHOWSTOPPERS:
+
+
+PATCHES ACCEPTED TO BACKPORT:
+  [ start all new proposals below, under PATCHES PROPOSED. ]
+
+
+PATCHES PROPOSED TO BACKPORT:
+  [ New proposals should be added at the end of the list ]
+
+* Backport cleanup of semantics of thisAccessedTime and
+  lastAccessedTime for sessions:
+  - preparational whitespace changes
+    http://svn.apache.org/viewvc?rev=711695&view=rev
+  - Give thisAccessedTime and lastAccessedTime for sessions
+    a clear semantics:
+    http://svn.apache.org/viewvc?rev=711711&view=rev
+    - thisAccessedTime will be updated at the beginning and
+      at the end of session use
+    - lastAccessedTime will only be updated at the end of
+      session use
+    This means:
+    - lastAccessedTime is the last access time of a session
+      disregarding any request still being processed on.
+      So this is good to use even from within a request
+      to detect when its own session has been used last before.
+    - thisAccessedTime already gets updated when a new request
+      disregarding any request still being processed on.
+      So this is better for any idleness check or information.
+    - thisAccessedTime >= lastAccessedTime always
+  - Port from StandardSession to DeltaSession
+    http://svn.apache.org/viewvc?rev=711714&view=rev
+  - Expose thisAccessedTime via the session interface
+    and ManagerBase, so we can use it from outside the session.
+    http://svn.apache.org/viewvc?rev=711716&view=rev
+  - Make the classes checking session idleness use thisAccessedTime.
+    http://svn.apache.org/viewvc?rev=711720&view=rev
+    This is not for invalidation, only for displaying
+    idle times and making persistance decisions.
+  +1: rjung
+   0: billbarker: generally agree with remm that this is too big of a change for the stable branch
+                 but could agree to some of it if it was split into parts
+   0: markt: Agree with Bill - smaller parts would be better
+  -1: remm: no for TC 6.0
+  -1: funkman : api change in Session.java for .x.x release
+
+* Allow special characters recognized by the Windows command-line shell to
+  be present in the names of CATALINA_HOME/_BASE and the current directory
+  used to call the Tomcat scripts.
+  Fixes the problem reported for the '&' character:
+    https://issues.apache.org/bugzilla/show_bug.cgi?id=48464#c4
+  "help cmd" lists the following characters as special:
+   <space> and &()[]{}^=;!'+,`~
+  Note that:
+   - cd, set, echo commands have to use quotes when a name contains '&'
+   - names containing the space character are already working without this patch
+  Patch:
+  http://people.apache.org/~kkolinko/patches/2010-01-03_bug48464-c4_ampersand_tc6.patch
+  (a backport of revs. 895191, 895392)
+  Tested on Windows XP.
+  +1: kkolinko, rjung
+  -1:
+  rjung: I would slightly prefer to apply after we finally managed to produce a working
+         release for 6.0.x, since changes in the Windows bat files are hard to test
+         for all possible cases, paths etc.
+         The 'set "a=%b%"' trick is nice, because if you only use the quotation
+         marks around the rhs, Windows actually adds them to the value of 'a'.
+
+* Force disconnect upon transmission failure
+  http://svn.apache.org/viewvc?rev=898906&view=rev
+  +1: fhanik, jim, pero
+  -1: 
+
+* Remove @Deprecated annotations from javax.servlet.jsp.JspContext
+  Part of http://svn.apache.org/viewvc?rev=899635&view=rev
+  http://svn.apache.org/viewvc/tomcat/trunk/java/javax/servlet/jsp/JspContext.java?view=diff&r1=899634&r2=899635&pathrev=899635
+  +1: kkolinko
+  -1:
+
+* Use CRLF line ends in conf/* files installed by the Windows exe installer
+  http://people.apache.org/~kkolinko/patches/2010-01-18_tc6_installer-crlf.patch
+  +1: kkolinko, jfclere
+  -1:
+

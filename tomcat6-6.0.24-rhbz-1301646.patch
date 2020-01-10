@@ -1,0 +1,125 @@
+--- java/org/apache/catalina/connector/CoyoteAdapter.java.orig	2015-12-11 08:25:17.245764280 -0500
++++ java/org/apache/catalina/connector/CoyoteAdapter.java	2015-12-11 07:46:48.411409761 -0500
+@@ -259,9 +259,10 @@
+ 
+         Request request = (Request) req.getNote(ADAPTER_NOTES);
+         Response response = (Response) res.getNote(ADAPTER_NOTES);
++        boolean create = false;
+ 
+         if (request == null) {
+-
++            create = true;
+             // Create objects
+             request = (Request) connector.createRequest();
+             request.setCoyoteRequest(req);
+--- java/org/apache/coyote/http11/Http11NioProtocol.java.orig	2015-12-10 16:13:18.227670554 -0500
++++ java/org/apache/coyote/http11/Http11NioProtocol.java	2015-12-10 16:19:36.946500948 -0500
+@@ -637,6 +637,10 @@
+             recycledProcessors.clear();
+         }
+         
++        /**
++         * Use this only if the processor is not available, otherwise use
++         * {@link #release(NioChannel, Http11NioProcessor).
++         */
+         public void release(NioChannel socket) {
+             Http11NioProcessor result = connections.remove(socket);
+             if ( result != null ) {
+@@ -645,6 +649,14 @@
+             }
+         }
+ 
++
++        public void release(NioChannel socket, Http11NioProcessor processor) {
++            connections.remove(socket);
++            processor.recycle();
++            recycledProcessors.offer(processor);
++        }
++
++
+         public SocketState event(NioChannel socket, SocketStatus status) {
+             Http11NioProcessor result = connections.get(socket);
+ 
+@@ -676,8 +688,7 @@
+                         (sm.getString("http11protocol.proto.error"), e);
+                 } finally {
+                     if (state != SocketState.LONG) {
+-                        connections.remove(socket);
+-                        recycledProcessors.offer(result);
++                        release(socket, result);
+                         if (state == SocketState.OPEN) {
+                             socket.getPoller().add(socket);
+                         }
+@@ -732,11 +743,11 @@
+                 } else if ( state == SocketState.OPEN) {
+                     // In Keep-alive but between requests. OK to recycle
+                     // processor. Continue to poll for the next request
++                    release(socket, processor);
+                     socket.getPoller().add(socket);
+-                    release(socket);
+                 } else {
+                     // Connection closed. OK to recycle the processor
+-                    release(socket);
++                    release(socket, processor);
+                 }
+                 return state;
+ 
+@@ -761,7 +772,7 @@
+                 Http11NioProtocol.log.error
+                     (sm.getString("http11protocol.proto.error"), e);
+             }
+-            recycledProcessors.offer(processor);
++            release(socket, processor);
+             return SocketState.CLOSED;
+         }
+ 
+--- java/org/apache/coyote/http11/InternalNioOutputBuffer.java.orig	2015-12-11 08:24:39.437995232 -0500
++++ java/org/apache/coyote/http11/InternalNioOutputBuffer.java	2015-12-11 07:42:09.830258440 -0500
+@@ -329,9 +329,10 @@
+ 
+         // Recycle Request object
+         response.recycle();
+-        socket.getBufHandler().getWriteBuffer().clear();
+-
+-        socket = null;
++        if (socket != null) {
++            socket.getBufHandler().getWriteBuffer().clear();
++            socket = null;
++        }
+         pos = 0;
+         lastActiveFilter = -1;
+         committed = false;
+--- webapps/docs/changelog.xml.orig 2016-01-07 15:45:33.257119906 -0500
++++ webapps/docs/changelog.xml  2016-01-07 15:45:58.043120341 -0500
+@@ -43,6 +43,31 @@
+ <!-- Section names:
+  General, Catalina, Coyote, Jasper, Cluster, Web applications, Other
+ -->
++<section name="Tomcat 6.0.24-93 (csutherl)">
++  <subsection name="Coyote">
++    <changelog>
++      <fix>
++        <bug>50651</bug>: Fix NPE in InternalNioOutputBuffer.recycle().
++        (kkolinko)
++      </fix>
++      <fix>
++        Remove a huge memory leak in the NIO connector introduced by the fix
++        for <bug>49884</bug>. (markt)
++      </fix>
++      <fix>
++        Improve recycling of processors in Http11NioProtocol. (kkolinko)
++      </fix>
++    </changelog>
++  </subsection>
++  <subsection name="Coyote">
++    <changelog>
++      <fix>
++        Remove a huge memory leak in the NIO connector introduced by the fix
++        for <bug>49884</bug>. (markt)
++      </fix>
++    </changelog>
++  </subsection>
++</section>
+ <section name="Tomcat 6.0.24 (jfclere)" rtext="released 2010-01-21">
+   <subsection name="Catalina">
+     <changelog>

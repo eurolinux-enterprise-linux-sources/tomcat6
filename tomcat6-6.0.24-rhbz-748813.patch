@@ -1,0 +1,23 @@
+--- ./java/org/apache/catalina/connector/Request.java.orig	2011-10-25 11:36:34.814733712 -0600
++++ ./java/org/apache/catalina/connector/Request.java	2011-10-25 11:38:30.434732663 -0600
+@@ -2604,7 +2604,9 @@
+                 }
+                 return;
+             }
+-            parameters.processParameters(formData, 0, formData.length);
++				if (formData != null) {
++            	parameters.processParameters(formData, 0, formData.length);
++				}
+         }
+ 
+     }
+@@ -2650,6 +2652,9 @@
+                 body.append(buffer, 0, len);
+             }
+         }
++		  if (body.getLength() == 0) {
++			  return null;
++		  }
+         if (body.getLength() < body.getBuffer().length) {
+             int length = body.getLength();
+             byte[] result = new byte[length];

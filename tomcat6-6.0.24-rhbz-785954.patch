@@ -1,0 +1,14 @@
+--- java/org/apache/catalina/servlets/DefaultServlet.java.orig	2012-09-26 14:20:22.049385017 -0600
++++ java/org/apache/catalina/servlets/DefaultServlet.java	2012-09-26 14:32:26.047908495 -0600
+@@ -686,9 +686,9 @@
+                 // to be ignored by the resource that is including us.
+                 // Therefore, the only way we can let the including resource
+                 // know is by including warning message in response
+-                response.getWriter().write(
++                response.getWriter().write(RequestUtil.filter(
+                     sm.getString("defaultServlet.missingResource",
+-                    requestUri));
++                    requestUri)));
+             }
+ 
+             response.sendError(HttpServletResponse.SC_NOT_FOUND,

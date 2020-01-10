@@ -1,0 +1,184 @@
+--- ./java/javax/el/BeanELResolver.java.orig	2016-01-26 11:17:02.184165173 -0500
++++ ./java/javax/el/BeanELResolver.java	2016-01-26 11:17:33.221145623 -0500
+@@ -167,25 +167,49 @@ public class BeanELResolver extends ELRe
+ 		return null;
+ 	}
+ 
+-	protected final static class BeanProperties {
+-		private final Map<String, BeanProperty> properties;
++    protected final static class BeanProperties {
++        private final Map<String, BeanProperty> properties;
+ 
+-		private final Class<?> type;
++        private final Class<?> type;
+ 
+-		public BeanProperties(Class<?> type) throws ELException {
+-			this.type = type;
+-			this.properties = new HashMap<String, BeanProperty>();
+-			try {
+-				BeanInfo info = Introspector.getBeanInfo(this.type);
+-				PropertyDescriptor[] pds = info.getPropertyDescriptors();
+-				for (int i = 0; i < pds.length; i++) {
+-					this.properties.put(pds[i].getName(), new BeanProperty(
+-							type, pds[i]));
+-				}
+-			} catch (IntrospectionException ie) {
+-				throw new ELException(ie);
+-			}
+-		}
++        public BeanProperties(Class<?> type) throws ELException {
++            this.type = type;
++            this.properties = new HashMap<String, BeanProperty>();
++            try {
++                BeanInfo info = Introspector.getBeanInfo(this.type);
++                PropertyDescriptor[] pds = info.getPropertyDescriptors();
++                for (PropertyDescriptor pd: pds) {
++                    this.properties.put(pd.getName(), new BeanProperty(type, pd));
++                }
++                if (System.getSecurityManager() != null) {
++                    // When running with SecurityManager, some classes may be
++                    // not accessible, but have accessible interfaces.
++                    populateFromInterfaces(type);
++                }
++            } catch (IntrospectionException ie) {
++                throw new ELException(ie);
++            }
++        }
++
++        private void populateFromInterfaces(Class<?> aClass) throws IntrospectionException {
++            Class<?> interfaces[] = aClass.getInterfaces();
++            if (interfaces.length > 0) {
++                for (Class<?> ifs : interfaces) {
++                    BeanInfo info = Introspector.getBeanInfo(ifs);
++                    PropertyDescriptor[] pds = info.getPropertyDescriptors();
++                    for (PropertyDescriptor pd : pds) {
++                        if (!this.properties.containsKey(pd.getName())) {
++                            this.properties.put(pd.getName(), new BeanProperty(
++                                    this.type, pd));
++                        }
++                    }
++                }
++            }
++            Class<?> superclass = aClass.getSuperclass();
++            if (superclass != null) {
++                populateFromInterfaces(superclass);
++            }
++        }
+ 
+ 		private BeanProperty get(ELContext ctx, String name) {
+ 			BeanProperty property = this.properties.get(name);
+--- ./java/org/apache/jasper/runtime/PageContextImpl.java.orig	2016-01-26 11:17:02.184165173 -0500
++++ ./java/org/apache/jasper/runtime/PageContextImpl.java	2016-01-26 11:17:33.221145623 -0500
+@@ -5,9 +5,9 @@
+  * The ASF licenses this file to You under the Apache License, Version 2.0
+  * (the "License"); you may not use this file except in compliance with
+  * the License.  You may obtain a copy of the License at
+- * 
++ *
+  *      http://www.apache.org/licenses/LICENSE-2.0
+- * 
++ *
+  * Unless required by applicable law or agreed to in writing, software
+  * distributed under the License is distributed on an "AS IS" BASIS,
+  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+@@ -59,7 +59,7 @@ import org.apache.jasper.util.Enumerator
+ /**
+  * Implementation of the PageContext class from the JSP spec. Also doubles as a
+  * VariableResolver for the EL.
+- * 
++ *
+  * @author Anil K. Vijendran
+  * @author Larry Cable
+  * @author Hans Bergsten
+@@ -903,42 +903,14 @@ public class PageContextImpl extends Pag
+ 	 * @return The result of the evaluation
+ 	 */
+ 	public static Object proprietaryEvaluate(final String expression,
+-			final Class expectedType, final PageContext pageContext,
++                       final Class<?> expectedType, final PageContext pageContext,
+ 			final ProtectedFunctionMapper functionMap, final boolean escape)
+ 			throws ELException {
+-		Object retValue;
+-        final ExpressionFactory exprFactory = jspf.getJspApplicationContext(pageContext.getServletContext()).getExpressionFactory();
+-		if (SecurityUtil.isPackageProtectionEnabled()) {
+-			try {
+-				retValue = AccessController
+-						.doPrivileged(new PrivilegedExceptionAction() {
+-
+-							public Object run() throws Exception {
+-                                ELContextImpl ctx = (ELContextImpl) pageContext.getELContext();
+-                                ctx.setFunctionMapper(new FunctionMapperImpl(functionMap));
+-								ValueExpression ve = exprFactory.createValueExpression(ctx, expression, expectedType);
+-                                return ve.getValue(ctx);
+-							}
+-						});
+-			} catch (PrivilegedActionException ex) {
+-				Exception realEx = ex.getException();
+-				if (realEx instanceof ELException) {
+-					throw (ELException) realEx;
+-				} else {
+-					throw new ELException(realEx);
+-				}
+-			}
+-		} else {
++            final ExpressionFactory exprFactory = jspf.getJspApplicationContext(pageContext.getServletContext()).getExpressionFactory();
+             ELContextImpl ctx = (ELContextImpl) pageContext.getELContext();
+             ctx.setFunctionMapper(new FunctionMapperImpl(functionMap));
+             ValueExpression ve = exprFactory.createValueExpression(ctx, expression, expectedType);
+-            retValue = ve.getValue(ctx);
+-		}
+-		if (escape && retValue != null) {
+-			retValue = XmlEscape(retValue.toString());
+-		}
+-
+-		return retValue;
++            return ve.getValue(ctx);
+ 	}
+ 
+ 	public ELContext getELContext() {
+--- ./java/org/apache/jasper/security/SecurityClassLoad.java.orig	2016-01-26 11:17:02.185165172 -0500
++++ ./java/org/apache/jasper/security/SecurityClassLoad.java	2016-01-26 11:17:33.221145623 -0500
+@@ -93,8 +93,6 @@ public final class SecurityClassLoad {
+                 "runtime.PageContextImpl$11");      
+             loader.loadClass( basePackage +
+                 "runtime.PageContextImpl$12");      
+-            loader.loadClass( basePackage +
+-                "runtime.PageContextImpl$13");      
+ 
+             loader.loadClass( basePackage +
+                 "runtime.JspContextWrapper");   
+--- ./webapps/docs/changelog.xml.orig	2016-01-26 11:17:02.186165171 -0500
++++ ./webapps/docs/changelog.xml	2016-01-26 11:24:22.118888073 -0500
+@@ -43,6 +43,17 @@
+ <!-- Section names:
+  General, Catalina, Coyote, Jasper, Cluster, Web applications, Other
+ -->
++<section name="Tomcat 6.0.24-94 (csutherl)">
++  <subsection name="Jasper">
++    <changelog>
++      <fix>
++        Fix potential issue with BeanELResolver when running under a security
++        manager. Some classes may not be accessible but may have accessible
++        interfaces. (markt)
++      </fix>
++    </changelog>
++  </subsection>
++</section>
+ <section name="Tomcat 6.0.24-93 (csutherl)">
+   <subsection name="Coyote">
+     <changelog>
+@@ -59,14 +70,6 @@
+       </fix>
+     </changelog>
+   </subsection>
+-  <subsection name="Coyote">
+-    <changelog>
+-      <fix>
+-        Remove a huge memory leak in the NIO connector introduced by the fix
+-        for <bug>49884</bug>. (markt)
+-      </fix>
+-    </changelog>
+-  </subsection>
+ </section>
+ <section name="Tomcat 6.0.24 (jfclere)" rtext="released 2010-01-21">
+   <subsection name="Catalina">

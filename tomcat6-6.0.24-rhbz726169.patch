@@ -1,0 +1,115 @@
+Index: java/org/apache/jasper/compiler/Generator.java
+===================================================================
+--- java/org/apache/jasper/compiler/Generator.java	(revision 910047)
++++ java/org/apache/jasper/compiler/Generator.java	(working copy)
+@@ -333,6 +333,9 @@
+             }
+ 
+             public void visit(Node.CustomTag n) throws JasperException {
++                // XXX - Actually there is no need to declare those
++                // "_jspx_" + varName + "_" + nestingLevel variables when we are
++                // inside a JspFragment.
+ 
+                 if (n.getCustomNestingLevel() > 0) {
+                     TagVariableInfo[] tagVarInfos = n.getTagVariableInfos();
+@@ -2484,6 +2487,11 @@
+         }
+ 
+         private void declareScriptingVars(Node.CustomTag n, int scope) {
++            if (isFragment) {
++                // No need to declare Java variables, if we inside a
++                // JspFragment, because a fragment is always scriptless.
++                return;
++            }
+ 
+             Vector vec = n.getScriptingVars(scope);
+             if (vec != null) {
+@@ -2531,6 +2539,14 @@
+             if (n.getCustomNestingLevel() == 0) {
+                 return;
+             }
++            if (isFragment) {
++                // No need to declare Java variables, if we inside a
++                // JspFragment, because a fragment is always scriptless.
++                // Thus, there is no need to save/ restore/ sync them.
++                // Note, that JspContextWrapper.syncFoo() methods will take
++                // care of saving/ restoring/ sync'ing of JspContext attributes.
++                return;
++            }
+ 
+             TagVariableInfo[] tagVarInfos = n.getTagVariableInfos();
+             VariableInfo[] varInfos = n.getVariableInfos();
+@@ -2591,6 +2607,14 @@
+             if (n.getCustomNestingLevel() == 0) {
+                 return;
+             }
++            if (isFragment) {
++                // No need to declare Java variables, if we inside a
++                // JspFragment, because a fragment is always scriptless.
++                // Thus, there is no need to save/ restore/ sync them.
++                // Note, that JspContextWrapper.syncFoo() methods will take
++                // care of saving/ restoring/ sync'ing of JspContext attributes.
++                return;
++            }
+ 
+             TagVariableInfo[] tagVarInfos = n.getTagVariableInfos();
+             VariableInfo[] varInfos = n.getVariableInfos();
+@@ -2645,6 +2669,15 @@
+          * given scope.
+          */
+         private void syncScriptingVars(Node.CustomTag n, int scope) {
++            if (isFragment) {
++                // No need to declare Java variables, if we inside a
++                // JspFragment, because a fragment is always scriptless.
++                // Thus, there is no need to save/ restore/ sync them.
++                // Note, that JspContextWrapper.syncFoo() methods will take
++                // care of saving/ restoring/ sync'ing of JspContext attributes.
++                return;
++            }
++
+             TagVariableInfo[] tagVarInfos = n.getTagVariableInfos();
+             VariableInfo[] varInfos = n.getVariableInfos();
+ 
+Index: java/org/apache/jasper/compiler/ScriptingVariabler.java
+===================================================================
+--- java/org/apache/jasper/compiler/ScriptingVariabler.java	(revision 910047)
++++ java/org/apache/jasper/compiler/ScriptingVariabler.java	(working copy)
+@@ -58,17 +58,17 @@
+     static class ScriptingVariableVisitor extends Node.Visitor {
+ 
+ 	private ErrorDispatcher err;
+-	private Hashtable scriptVars;
++	private Map<String, Integer> scriptVars;
+ 	
+ 	public ScriptingVariableVisitor(ErrorDispatcher err) {
+ 	    this.err = err;
+-	    scriptVars = new Hashtable();
++	    scriptVars = new HashMap<String, Integer>();
+ 	}
+ 
+ 	public void visit(Node.CustomTag n) throws JasperException {
+ 	    setScriptingVars(n, VariableInfo.AT_BEGIN);
+ 	    setScriptingVars(n, VariableInfo.NESTED);
+-	    new ScriptingVariableVisitor(err).visitBody(n);
++	    visitBody(n);
+ 	    setScriptingVars(n, VariableInfo.AT_END);
+ 	}
+ 
+@@ -104,7 +104,7 @@
+ 		    }
+ 		    String varName = varInfos[i].getVarName();
+ 		    
+-		    Integer currentRange = (Integer) scriptVars.get(varName);
++		    Integer currentRange = scriptVars.get(varName);
+ 		    if (currentRange == null
+ 			    || ownRange.compareTo(currentRange) > 0) {
+ 			scriptVars.put(varName, ownRange);
+@@ -127,7 +127,7 @@
+ 			}
+ 		    }
+ 
+-		    Integer currentRange = (Integer) scriptVars.get(varName);
++		    Integer currentRange = scriptVars.get(varName);
+ 		    if (currentRange == null
+ 			    || ownRange.compareTo(currentRange) > 0) {
+ 			scriptVars.put(varName, ownRange);

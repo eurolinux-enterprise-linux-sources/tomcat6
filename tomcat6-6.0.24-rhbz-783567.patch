@@ -1,0 +1,209 @@
+--- java/org/apache/jasper/compiler/AttributeParser.java.orig	2012-01-23 14:02:33.090870544 -0700
++++ java/org/apache/jasper/compiler/AttributeParser.java	2012-01-23 14:25:39.616775676 -0700
+@@ -24,7 +24,7 @@
+  * "\${1+1}". After unquoting, both appear as "${1+1}" but the first should
+  * evaluate to "2" and the second to "${1+1}". Literal \, $ and # need special
+  * treatment to ensure there is no ambiguity. The JSP attribute unquoting
+- * covers \\, \", \', \$, \#, %\>, <\%, &apos; and &quot;
++ * covers \\, \", \', \$, \#, %\&gt;, &lt;\%, &amp;apos; and &amp;quot;
+  */
+ public class AttributeParser {
+ 
+@@ -43,13 +43,16 @@
+      *                      scripting expressions.
+      * @param isELIgnored   Is expression language being ignored on the page
+      *                      where the JSP attribute is defined.
++	  * @param isDeferredSyntaxAllowedAsLiteral
++	  *                      Are deferred expressions treated as literals?
+      * @return              An unquoted JSP attribute that, if it contains
+      *                      expression language can be safely passed to the EL
+      *                      processor without fear of ambiguity.
+      */
+     public static String getUnquoted(String input, char quote,
+-            boolean isELIgnored) {
++            boolean isELIgnored, boolean isDeferredSyntaxAllowedAsLiteral) {
+         return (new AttributeParser(input, quote, isELIgnored,
++		          isDeferredSyntaxAllowedAsLiteral,
+                 STRICT_QUOTE_ESCAPING)).getUnquoted();
+     }
+ 
+@@ -62,15 +65,18 @@
+      *                      scripting expressions.
+      * @param isELIgnored   Is expression language being ignored on the page
+      *                      where the JSP attribute is defined.
++	  * @param isDeferredSyntaxAllowedAsLiteral
++	  *                      Are deferred expressions treated as literals?
+      * @param strict        The value to use for STRICT_QUOTE_ESCAPING.
+      * @return              An unquoted JSP attribute that, if it contains
+      *                      expression language can be safely passed to the EL
+      *                      processor without fear of ambiguity.
+      */
+     protected static String getUnquoted(String input, char quote,
+-            boolean isELIgnored, boolean strict) {
++            boolean isELIgnored, boolean isDeferredSyntaxAllowedAsLiteral,
++				boolean strict) {
+         return (new AttributeParser(input, quote, isELIgnored,
+-                strict)).getUnquoted();
++                isDeferredSyntaxAllowedAsLiteral, strict)).getUnquoted();
+     }
+ 
+     /* The quoted input string. */
+@@ -82,7 +88,10 @@
+     /* Is expression language being ignored - affects unquoting. \$ and \# are
+      * treated as literals rather than quoted values. */
+     private final boolean isELIgnored;
+-    
++   
++	/* Are deferred expression treated as literals */
++	private final boolean isDeferredSyntaxAllowedAsLiteral;
++	 
+     /* Overrides the STRICT_QUOTE_ESCAPING. Used for Unit tests only. */
+     private final boolean strict;
+     
+@@ -109,12 +118,15 @@
+      * @param strict
+      */
+     private AttributeParser(String input, char quote,
+-            boolean isELIgnored, boolean strict) {
++            boolean isELIgnored, boolean isDeferredSyntaxAllowedAsLiteral,
++				boolean strict) {
+         this.input = input;
+         this.quote = quote;
+         // If quote is null this is a scriptign expressions and any EL syntax
+         // should be ignored
+         this.isELIgnored = isELIgnored || (quote == 0);
++		  this.isDeferredSyntaxAllowedAsLiteral =
++		   	isDeferredSyntaxAllowedAsLiteral;
+         this.strict = strict;
+         this.type = getType(input);
+         this.size = input.length();
+@@ -151,22 +163,27 @@
+             char ch = nextChar();
+             if (!isELIgnored && ch == '\\') {
+                 if (type == 0) {
+-                    type = '$';
+-                }
+-                result.append(type);
+-                result.append("{'\\\\'}");
++                  result.append("\\"); 
++                } else {
++						 result.append(type);
++						 result.append("{'\\\\'}");
++					 }
+             } else if (!isELIgnored && ch == '$' && lastChEscaped){
+                 if (type == 0) {
+-                    type = '$';
+-                }
+-                result.append(type);
+-                result.append("{'$'}");
++                	result.append("\\$");
++                } else {
++                	result.append(type);
++                	result.append("{'$'}");
++					 }
+             } else if (!isELIgnored && ch == '#' && lastChEscaped){
++					// Note if isDeferredSyntaxAllowedAsLiteral==true, \# will
++					// not be treated as an escape
+                 if (type == 0) {
+-                    type = '$';
+-                }
+-                result.append(type);
+-                result.append("{'#'}");
++                  result.append("\\#");
++                } else {
++                	result.append(type);
++                	result.append("{'#'}");
++					 }
+             } else if (ch == type){
+                 if (i < size) {
+                     char next = input.charAt(i);
+@@ -197,8 +214,8 @@
+     private void parseEL() {
+         boolean endEL = false;
+         boolean insideLiteral = false;
++		  char literalQuote = 0;
+         while (i < size && !endEL) {
+-            char literalQuote = '\'';
+             char ch = nextChar();
+             if (ch == '\'' || ch == '\"') {
+                 if (insideLiteral) {
+@@ -261,7 +278,10 @@
+         } else if (ch == '\\' && i + 1 < size) {
+             ch = input.charAt(i + 1);
+             if (ch == '\\' || ch == '\"' || ch == '\'' ||
+-                    (!isELIgnored && (ch == '$' || ch == '#'))) {
++                    (!isELIgnored && 
++						  	(ch == '$' || 
++							(!isDeferredSyntaxAllowedAsLiteral && 
++							   ch == '#')))) {
+                 i += 2;
+                 lastChEscaped = true;
+             } else {
+@@ -317,7 +337,7 @@
+             if (current == '\\') {
+                 // Escape character - skip a character
+                 j++;
+-            } else if (current == '#') {
++            } else if (current == '#' && !isDeferredSyntaxAllowedAsLiteral) {
+                 if (j < (len -1) && value.charAt(j + 1) == '{') {
+                     return '#';
+                 }
+--- java/org/apache/jasper/compiler/Parser.java.orig	2012-01-23 14:03:24.290867044 -0700
++++ java/org/apache/jasper/compiler/Parser.java	2012-01-23 14:26:56.395770481 -0700
+@@ -247,7 +247,8 @@
+                 quote = watch.charAt(0);
+             }
+             ret = AttributeParser.getUnquoted(reader.getText(start, stop),
+-                    quote, pageInfo.isELIgnored());
++                    quote, pageInfo.isELIgnored(),
++						  pageInfo.isDeferredSyntaxAllowedAsLiteral());
+         } catch (IllegalArgumentException iae) {
+             err.jspError(start, iae.getMessage());
+         }
+--- test/org/apache/jasper/compiler/TestAttributeParser.java.orig	2012-01-23 14:03:54.639864967 -0700
++++ test/org/apache/jasper/compiler/TestAttributeParser.java	2012-01-23 14:31:31.188751696 -0700
+@@ -134,9 +134,25 @@
+         // Quoting <% and %>
+         assertEquals("hello <% world", evalAttr("hello <\\% world", '\"'));
+         assertEquals("hello %> world", evalAttr("hello %> world", '\"'));
++
++		  
++		  // Test that the end of literal in EL expression is recognized in
++		  // parseEL(), be it quoted with single or double quotes. That is, that
++		  // AttributeParser correctly switches between parseLiteral and parseEL
++		  // methods.
++		  //
++		  // The test is based on the difference in how the '\' character is printed:
++		  // when in parseLiteral \\${ will be printed as ${'\'}${, but if we are still
++		  // inside of parseEL it will be printed as \${, thus preventing the EL
++		  // expression that follows from being evaluated.
++		  //
++		  assertEquals("foo\\bar\\baz", evalAttr("${\'foo\'}\\\\${\'bar\'}\\\\${\'baz\'}", '\"'));
++		  assertEquals("foo\\bar\\baz", evalAttr("${\'foo\'}\\\\${\\\"bar\\\"}\\\\${\'baz\'}", '\"'));
++		  assertEquals("foo\\bar\\baz", evalAttr("${\\\"foo\\\"}\\\\${\'bar\'}\\\\${\\\"baz\\\"}", '\"'));
++		  assertEquals("foo\\bar\\baz", evalAttr("${\"foo\"}\\\\${\\\'bar\\\'}\\\\${\"baz\"}", '\''));
+     }
+ 
+-    public void testScriptExpressiinLiterals() {
++    public void testScriptExpressionLiterals() {
+         assertEquals(" \"hello world\" ", parseScriptExpression(
+                 " \"hello world\" ", (char) 0));
+         assertEquals(" \"hello \\\"world\" ", parseScriptExpression(
+@@ -149,13 +165,15 @@
+         ctx.setFunctionMapper(new FMapper());
+         ExpressionFactoryImpl exprFactory = new ExpressionFactoryImpl();
+         ValueExpression ve = exprFactory.createValueExpression(ctx,
+-                AttributeParser.getUnquoted(expression, quote, false, false),
++                AttributeParser.getUnquoted(expression, quote, false, false,
++					 	false),
+                 String.class);
+         return (String) ve.getValue(ctx);
+     }
+     
+     private String parseScriptExpression(String expression, char quote) {
+-        return AttributeParser.getUnquoted(expression, quote, false, false);
++        return AttributeParser.getUnquoted(expression, quote, false, false,
++		  	false);
+     }
+ 
+     public static class FMapper extends FunctionMapper {
