@@ -1,0 +1,12 @@
+--- java/org/apache/catalina/session/LocalStrings_fr.properties.orig	2015-12-09 14:19:03.293299813 -0500
++++ java/org/apache/catalina/session/LocalStrings_fr.properties	2015-12-09 14:20:02.535015850 -0500
+@@ -61,7 +61,8 @@
+ standardSession.getValueNames.ise="getValueNames": Session d\u00e9j\u00e0 invalid\u00e9e
+ standardSession.notSerializable=Impossible de s\u00e9rialiser l''attribut de session {0} pour la session {1}
+ standardSession.removeAttribute.ise="removeAttribute": Session d\u00e9j\u00e0 invalid\u00e9e
+-standardSession.sessionEvent=L''\u00e9couteur d''\u00e9v\u00e8nement de session (session event listener) a g\u00e9n\u00e9r\u0
++standardSession.sessionEvent=L''\u00e9couteur d''\u00e9v\u00e8nement de session (session event listener) a g\u00e9n\u00e9r\u00e9 une exception
++persistentManager.loading=Chargement de {0} sessions persistantes
+ persistentManager.loading=Chargement de {0} sessions persistantes
+ standardSession.setAttribute.iae="setAttribute": Attribut {0} non s\u00e9rialisable
+ standardSession.setAttribute.ise="setAttribute": Session d\u00e9j\u00e0 invalid\u00e9e

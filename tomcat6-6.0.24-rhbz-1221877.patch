@@ -1,0 +1,109 @@
+--- java/org/apache/catalina/connector/CoyoteAdapter.java.orig	2015-08-12 17:46:27.406685205 -0400
++++ java/org/apache/catalina/connector/CoyoteAdapter.java	2015-08-12 09:07:02.102890407 -0400
+@@ -462,6 +462,13 @@
+         connector.getMapper().map(serverName, decodedURI, 
+                                   request.getMappingData());
+         request.setContext((Context) request.getMappingData().context);
++        
++        // Had to do this after the context was set.
++        // Unfortunately parseSessionId is still necessary as it 
++        // affects the final URL. Safe as session cookies still 
++        // haven't been parsed.
++        if (isURLRewritingDisabled(request))
++            clearRequestedSessionURL(request);
+         request.setWrapper((Wrapper) request.getMappingData().wrapper);
+ 
+         // Filter trace method
+@@ -516,6 +523,13 @@
+         return true;
+     }
+ 
++    private boolean isURLRewritingDisabled(Request request) {
++        Context context = (Context) request.getMappingData().context;
++        if (context != null)
++            return (context.isDisableURLRewriting());
++        else
++            return (false);
++    }
+ 
+     /**
+      * Parse session id in URL.
+@@ -561,18 +575,22 @@
+                 request.setRequestedSessionURL(true);
+             } catch (UnsupportedEncodingException uee) {
+                 // Make sure no session ID is returned
+-                request.setRequestedSessionId(null);
+-                request.setRequestedSessionURL(false);
++                clearRequestedSessionURL(request);
+                 log.warn(sm.getString("coyoteAdapter.parseSession", enc), uee);
+             }
+         } else {
+-            request.setRequestedSessionId(null);
+-            request.setRequestedSessionURL(false);
++            clearRequestedSessionURL(request);
+         }
+ 
+     }
+ 
+ 
++    private void clearRequestedSessionURL(Request request) {
++        request.setRequestedSessionId(null);
++        request.setRequestedSessionURL(false);
++    }
++
++
+     /**
+      * Parse session id in URL.
+      */
+--- java/org/apache/catalina/connector/Response.java.orig	2015-08-12 17:46:27.407685215 -0400
++++ java/org/apache/catalina/connector/Response.java	2015-08-12 09:07:02.101890396 -0400
+@@ -1432,12 +1432,14 @@
+      * <li>The requested session ID was not received via a cookie
+      * <li>The specified URL points back to somewhere within the web
+      *     application that is responding to this request
++     * <li>If URL rewriting hasn't been disabled for this context
+      * </ul>
+      *
+      * @param location Absolute URL to be validated
+      */
+     protected boolean isEncodeable(final String location) {
+-
++        if (getContext().isDisableURLRewriting())
++            return (false);
+         if (location == null)
+             return (false);
+ 
+--- java/org/apache/catalina/core/mbeans-descriptors.xml.orig	2015-08-12 17:45:57.276373157 -0400
++++ java/org/apache/catalina/core/mbeans-descriptors.xml	2015-08-12 09:07:02.100890385 -0400
+@@ -135,6 +135,11 @@
+                description="String deployment descriptor "
+                type="java.lang.String"/>
+                      
++    <attribute name="disableURLRewriting"
++               description="Is URL Rewriting disabled?"
++               is="true"
++               type="boolean"/>
++    
+     <attribute name="docBase"
+                description="The document root for this web application"
+                type="java.lang.String"/>
+--- webapps/docs/changelog.xml.orig	2015-08-12 17:46:43.246849255 -0400
++++ webapps/docs/changelog.xml	2015-08-12 09:16:41.271265936 -0400
+@@ -43,6 +43,17 @@
+ <!-- Section names:
+  General, Catalina, Coyote, Jasper, Cluster, Web applications, Other
+ -->
++<section name="Tomcat 6.0.24+ (backports) (csutherl)" rtext="not released">
++  <subsection name="Catalina">
++    <changelog>
++      <add>
++        <bug>49811</bug>: Add an option to disable URL rewriting on a per
++        Context basis. The option name is <code>disableURLRewriting</code>.
++        (markt)
++      </add>
++    </changelog>
++  </subsection>
++</section>
+ <section name="Tomcat 6.0.24 (jfclere)" rtext="released 2010-01-21">
+   <subsection name="Catalina">
+     <changelog>

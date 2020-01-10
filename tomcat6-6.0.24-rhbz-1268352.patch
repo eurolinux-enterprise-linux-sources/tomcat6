@@ -89,13 +89,14 @@
          pos = 0;
          lastActiveFilter = -1;
          committed = false;
---- webapps/docs/changelog.xml.orig 2016-01-07 15:45:33.257119906 -0500
-+++ webapps/docs/changelog.xml  2016-01-07 15:45:58.043120341 -0500
-@@ -43,6 +43,31 @@
+--- webapps/docs/changelog.xml.orig	2015-12-10 16:13:18.229670543 -0500
++++ webapps/docs/changelog.xml	2015-12-11 07:49:14.933439986 -0500
+@@ -43,7 +43,22 @@
  <!-- Section names:
   General, Catalina, Coyote, Jasper, Cluster, Web applications, Other
  -->
-+<section name="Tomcat 6.0.24-93 (csutherl)">
+-<section name="Tomcat 6.0.24+ (backports) (csutherl)" rtext="not released">
++<section name="Tomcat 6.0.24-91 (csutherl)">
 +  <subsection name="Coyote">
 +    <changelog>
 +      <fix>
@@ -111,6 +112,13 @@
 +      </fix>
 +    </changelog>
 +  </subsection>
+   <subsection name="Catalina">
+     <changelog>
+       <add>
+@@ -732,6 +747,14 @@
+       </fix>
+     </changelog>
+   </subsection>
 +  <subsection name="Coyote">
 +    <changelog>
 +      <fix>
@@ -119,7 +127,6 @@
 +      </fix>
 +    </changelog>
 +  </subsection>
-+</section>
- <section name="Tomcat 6.0.24 (jfclere)" rtext="released 2010-01-21">
-   <subsection name="Catalina">
+   <subsection name="Cluster">
      <changelog>
+       <fix>

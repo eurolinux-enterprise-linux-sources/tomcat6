@@ -55,7 +55,7 @@
 Name: tomcat6
 Epoch: 0
 Version: %{major_version}.%{minor_version}.%{micro_version}
-Release: 94%{?dist}
+Release: 95%{?dist}
 Summary: Apache Servlet/JSP Engine, RI for Servlet %{servletspec}/JSP %{jspspec} API
 
 Group: Networking/Daemons
@@ -116,10 +116,17 @@ Patch35: %{name}-6.0.24-CVE-2014-0227.patch
 Patch36: %{name}-6.0.24-rhbz-1183252.patch
 Patch37: %{name}-6.0.24-rhbz-1031327.patch
 Patch38: %{name}-6.0.24-85-rhbz-1068689.patch
-Patch39: %{name}-6.0.24-rhbz-1301646.patch
-Patch40: %{name}-6.0.24-rhbz-1293289.patch
+Patch39: %{name}-6.0.24-rhbz-1221877.patch
+Patch40: %{name}-6.0.24-rhbz-1072484.patch
+Patch41: %{name}-6.0.24-rhbz-1134600.patch
+Patch42: %{name}-6.0.24-rhbz-1268352.patch
+Patch43: %{name}-6.0.24-rhbz-1264559.patch
+Patch44: %{name}-6.0.24-rhbz-1293290.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
+
+BuildArch: noarch
+
 BuildRequires: zip
 BuildRequires: ant
 BuildRequires: ant-trax
@@ -328,6 +335,10 @@ pushd %{packdname}
 %patch38 -p0
 %patch39 -p0
 %patch40 -p0
+%patch41 -p0
+%patch42 -p0
+%patch43 -p0
+%patch44 -p0
 
 %{__ln_s} $(build-classpath jakarta-taglibs-core) webapps/examples/WEB-INF/lib/jstl.jar
 %{__ln_s} $(build-classpath jakarta-taglibs-standard) webapps/examples/WEB-INF/lib/standard.jar
@@ -585,7 +596,7 @@ if [ "$1" = "0" ]; then
 fi
 
 %files
-%defattr(0664,root,root,0775)
+%defattr(0664,root,tomcat,0755)
 %doc %{packdname}/{LICENSE,NOTICE,RELEASE*}
 %attr(0755,root,root) %{_bindir}/%{name}-digest
 %attr(0755,root,root) %{_bindir}/%{name}-tool-wrapper
@@ -596,7 +607,8 @@ fi
 %attr(0755,root,root) %{_initrddir}/%{name}
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/logrotate.d/%{name}
 %config(noreplace) %{_sysconfdir}/sysconfig/%{name}
-%dir %{basedir}
+%attr(0755,root,tomcat) %dir %{basedir}
+%defattr(0664,root,tomcat,0775)
 %attr(0775,root,tomcat) %dir %{appdir}
 %attr(0775,root,tomcat) %dir %{confdir}
 %attr(0775,root, tomcat) %{confdir}/Catalina
@@ -661,7 +673,7 @@ fi
 %{_javadir}/%{name}/%{name}-el-%{elspec}-api-%{version}.jar
 
 %files webapps
-%defattr(0644,root,tomcat,0775)
+%defattr(0644,tomcat,tomcat,0755)
 %{appdir}/ROOT
 %{appdir}/examples
 %{appdir}/sample
@@ -669,11 +681,32 @@ fi
 #%{appdir}/manager
 
 %changelog
-* Thu Jan 28 2016 Coty Sutherland <csutherl@redhat.com> 0:6.0.24-94
-- Resolves: rhbz#1293289 CVE-2014-7810 tomcat6 security manager bypass via EL expressions
+* Mon Feb 8 2016 Coty Sutherland <csutherl@redhat.com> 0:6.0.24-95
+- Related: rhbz#1084426 Reverting to prevent Satellite installation issues mentioned in rhbz-1302761
 
-* Mon Dec 14 2015 Coty Sutherland <csutherl@redhat.com> 0:6.0.24-93
-- Resolves: rhbz#1301646 Resolving NIO connector memory leak
+* Fri Jan 08 2016 Coty Sutherland <csutherl@redhat.com> 0:6.0.24-92
+- Resolves: rhbz#1293290 CVE-2014-7810 tomcat6 security manager bypass via EL expressions
+
+* Mon Dec 21 2015 Coty Sutherland <csutherl@redhat.com> 0:6.0.24-91
+- Resolves: rhbz#886653 Tomcat6 files should be owned by user / group tomcat
+
+* Mon Dec 21 2015 Coty Sutherland <csutherl@redhat.com> 0:6.0.24-91
+- Resolves: rhbz#1155509 tomcat6 packages are arch dependent
+
+* Mon Dec 14 2015 Coty Sutherland <csutherl@redhat.com> 0:6.0.24-91
+- Resolves: rhbz#1264559 Correct behaviour of ResourceBundleELResolver.
+
+* Mon Dec 14 2015 Coty Sutherland <csutherl@redhat.com> 0:6.0.24-91
+- Resolves: rhbz#1268352 Resolving NIO connector memory leak.
+
+* Thu Dec 10 2015 Coty Sutherland <csutherl@redhat.com> 0:6.0.24-91
+- Resolves: rhbz#1134600 Resolve STRICT_SERVLET_COMPLIANCE issues.
+
+* Wed Dec 09 2015 Coty Sutherland <csutherl@redhat.com> 0:6.0.24-91
+- Resolves: rhbz#1072484 Resolve fix translation problem affecting IBM JDK.
+
+* Thu Oct 29 2015 Coty Sutherland <csutherl@redhat.com> 0:6.0.24-91
+- Resolves: rhbz#1221877 Add support for disableURLRewriting.
 
 * Fri May 15 2015 David Knox <dknox@redhat.com> 0:6.0.24-90
 - Related: rhbz#1042811 left over test value in the conf

@@ -1,0 +1,37 @@
+--- java/javax/el/ResourceBundleELResolver.java.orig	2015-12-14 08:40:15.630827735 -0500
++++ java/javax/el/ResourceBundleELResolver.java	2015-12-14 08:43:25.168783289 -0500
+@@ -38,12 +38,12 @@
+ 		}
+ 		
+ 		if (base instanceof ResourceBundle) {
++                    context.setPropertyResolved(true);
++
+ 			if (property != null) {
+ 				try {
+-				    Object result = ((ResourceBundle) base).getObject(property
+-							.toString());
+-		            context.setPropertyResolved(true);
+-				    return result;
++				    return ((ResourceBundle) base).getObject(property
++					     .toString());
+ 				} catch (MissingResourceException mre) {
+ 					return "???" + property.toString() + "???";
+ 				}
+--- webapps/docs/changelog.xml.orig	2015-12-14 08:40:15.632827724 -0500
++++ webapps/docs/changelog.xml	2015-12-14 08:44:41.010369609 -0500
+@@ -44,6 +44,15 @@
+  General, Catalina, Coyote, Jasper, Cluster, Web applications, Other
+ -->
+ <section name="Tomcat 6.0.24-91 (csutherl)">
++  <subsection name="Jasper">
++    <changelog>
++      <fix>
++        <bug>53001</bug>: Revert the fix for <bug>46915</bug> since the use case
++        described in the bug is invalid since it breaks the EL specification.
++        (markt)
++      </fix>
++    </changelog>
++  </subsection>
+   <subsection name="Coyote">
+     <changelog>
+       <fix>
