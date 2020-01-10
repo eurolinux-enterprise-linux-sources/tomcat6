@@ -55,7 +55,7 @@
 Name: tomcat6
 Epoch: 0
 Version: %{major_version}.%{minor_version}.%{micro_version}
-Release: 95%{?dist}
+Release: 98%{?dist}
 Summary: Apache Servlet/JSP Engine, RI for Servlet %{servletspec}/JSP %{jspspec} API
 
 Group: Networking/Daemons
@@ -122,6 +122,11 @@ Patch41: %{name}-6.0.24-rhbz-1134600.patch
 Patch42: %{name}-6.0.24-rhbz-1268352.patch
 Patch43: %{name}-6.0.24-rhbz-1264559.patch
 Patch44: %{name}-6.0.24-rhbz-1293290.patch
+Patch45: %{name}-6.0.24-CVE-2015-5174.patch
+Patch46: %{name}-6.0.24-CVE-2016-0706.patch
+Patch47: %{name}-6.0.24-CVE-2016-0714.patch
+Patch48: %{name}-6.0.24-CVE-2015-5345.patch
+Patch49: %{name}-6.0.24-CVE-2016-5388.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 
@@ -339,6 +344,11 @@ pushd %{packdname}
 %patch42 -p0
 %patch43 -p0
 %patch44 -p0
+%patch45 -p0
+%patch46 -p0
+%patch47 -p0
+%patch48 -p0
+%patch49 -p0
 
 %{__ln_s} $(build-classpath jakarta-taglibs-core) webapps/examples/WEB-INF/lib/jstl.jar
 %{__ln_s} $(build-classpath jakarta-taglibs-standard) webapps/examples/WEB-INF/lib/standard.jar
@@ -603,23 +613,23 @@ fi
 %attr(0755,root,root) %{_sbindir}/d%{name}
 %attr(0755,root,root) %{_sbindir}/%{name}
 %attr(0755,tomcat,root) %dir %{logdir}
-%attr(0644,tomcat,tomcat) %{logdir}/catalina.out
+%attr(0644,tomcat,tomcat) %verify(not size md5 mtime) %{logdir}/catalina.out
 %attr(0755,root,root) %{_initrddir}/%{name}
 %attr(0644,root,root) %config(noreplace) %{_sysconfdir}/logrotate.d/%{name}
-%config(noreplace) %{_sysconfdir}/sysconfig/%{name}
+%attr(0644,root,root) %config(noreplace) %{_sysconfdir}/sysconfig/%{name}
 %attr(0755,root,tomcat) %dir %{basedir}
-%defattr(0664,root,tomcat,0775)
+
+%defattr(0644,root,tomcat,0775)
 %attr(0775,root,tomcat) %dir %{appdir}
-%attr(0775,root,tomcat) %dir %{confdir}
-%attr(0775,root, tomcat) %{confdir}/Catalina
-# %dir %{confdir}/Catalina
+%attr(0755,root,tomcat) %dir %{confdir}
+%attr(0775,root,tomcat) %{confdir}/Catalina
 %attr(0775,root,tomcat) %dir %{confdir}/Catalina/localhost
 %config(noreplace) %{confdir}/%{name}.conf
 %config(noreplace) %{confdir}/*.policy
 %config(noreplace) %{confdir}/*.properties
 %config(noreplace) %{confdir}/context.xml
 %config(noreplace) %{confdir}/server.xml
-%attr(0664,root,tomcat) %config(noreplace) %{confdir}/tomcat-users.xml
+%attr(0640,root,tomcat) %config(noreplace) %{confdir}/tomcat-users.xml
 %config(noreplace) %{confdir}/web.xml
 %attr(0775,root,tomcat) %dir %{cachedir}
 %attr(0775,root,tomcat) %dir %{tempdir}
@@ -681,6 +691,19 @@ fi
 #%{appdir}/manager
 
 %changelog
+* Tue Aug 23 2016 Coty Sutherland <csutherl@redhat.com> 0:6.0.24-98
+- Resolves: rhbz#1362210 CVE-2016-5388 Tomcat: CGI sets environmental variable based on user supplied Proxy request header
+- Resolves: rhbz#1368119
+
+* Mon Aug 15 2016 Coty Sutherland <csutherl@redhat.com> 0:6.0.24-97
+- Resolves: rhbz#1367051 CVE-2015-5174 URL Normalization issue
+- Resolves: rhbz#1367054 CVE-2016-0706 Security Manager bypass via StatusManagerServlet
+- Resolves: rhbz#1367058 CVE-2016-0714 Security Manager bypass via persistence mechanisms
+- Resolves: rhbz#1367054 CVE-2015-5345 Directory disclosure
+
+* Tue Jul 19 2016 Coty Sutherland <csutherl@redhat.com> 0:6.0.24-96
+- Resolves: rhbz#1357123 rpm -V tomcat6 fails due on /var/log/tomcat6/catalina.out
+
 * Mon Feb 8 2016 Coty Sutherland <csutherl@redhat.com> 0:6.0.24-95
 - Related: rhbz#1084426 Reverting to prevent Satellite installation issues mentioned in rhbz-1302761
 
